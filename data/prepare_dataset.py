@@ -25,6 +25,14 @@ def preprocess_data(dataset_name):
 
         items_df = pd.read_csv("ml1m/movies.dat", sep="::", header=None, encoding='latin-1')
         items_df.columns = ["item_id", "title_year", "genres"]
+
+        items_df = items_df[items_df["item_id"].isin(df["item_id"].unique())]
+
+        #itemset1 = set(items_df["item_id"].values)
+        #itemset2 = set(df["item_id"].values)
+        #print(len(itemset1.difference(itemset2)))
+
+
         items_df["movie_title"] = items_df["title_year"].apply(lambda s: s[:-7])
         items_df["release_year"] = items_df["title_year"].apply(lambda s: s[-6:])
         items_df["release_year"] = items_df["release_year"].str.replace("(", "")
@@ -32,6 +40,8 @@ def preprocess_data(dataset_name):
         items_df.drop(columns=["title_year"], inplace=True)
         items_df.rename(columns={"item_id": "item_id:token", "movie_title": "movie_title:token_seq",
                                  "release_year": "release_year:token", "genres": "genre:token_seq"}, inplace=True)
+
+
     elif dataset_name == "ambar":
         df = pd.read_csv("ambar/ratings_info.csv")
         df.columns = ["user_id", "item_id", "rating"]
@@ -178,14 +188,17 @@ if __name__ == '__main__':
 
 
     # save splits without DP (beta=1)
-    PATH = "../custom_datasets_prepared_rp/" + DATASET
-    os.makedirs(PATH, exist_ok=True)
-    train_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".train.rating", sep="\t", index=False, header=False)
-    val_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".val.rating", sep="\t", index=False, header=False)
-    test_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".test.rating", sep="\t", index=False, header=False)
-    pd.concat([train_df, val_df, test_df]).to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".dataset.rating", sep="\t", index=False, header=False)
-    users_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".userlist", sep="\t", index=False, columns=["user_id:token", "attr:token"])
+    #PATH = "../custom_datasets_prepared_rp/" + DATASET
+    #os.makedirs(PATH, exist_ok=True)
+    #train_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".train.rating", sep="\t", index=False, header=False)
+    #val_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".val.rating", sep="\t", index=False, header=False)
+    #test_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".test.rating", sep="\t", index=False, header=False)
+    #pd.concat([train_df, val_df, test_df]).to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".dataset.rating", sep="\t", index=False, header=False)
+    #users_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".userlist", sep="\t", index=False, columns=["user_id:token", "attr:token"])
+
     items_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".itemlist", sep="\t", index=False, header=False, columns=["item_id:token"])
+
+    exit()
 
 
     betas = [0.8, 0.6, 0.4, 0.2, 0]
