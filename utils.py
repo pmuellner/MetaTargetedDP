@@ -30,7 +30,10 @@ def read_raw_dataset(dataset_name, path):
     return trainset, valset, testset
 
 def read_dp_trainset(dataset_name, epsilon, beta, method, path):
-    trainset_dp = pd.read_csv(path + "/" + dataset_name + ".train_e" + str(epsilon) + "_b" + str(beta) + "_" + method + ".rating", sep="\t", header=None).to_records(index=False).tolist()
+    if method == "baseline":
+        trainset_dp = pd.read_csv(path + "/" + dataset_name + ".train_e" + str(epsilon) + "_b" + str(beta) + "_random_dp.rating",sep="\t", header=None).to_records(index=False).tolist()
+    else:
+        trainset_dp = pd.read_csv(path + "/" + dataset_name + ".train_e" + str(epsilon) + "_b" + str(beta) + "_" + method + ".rating", sep="\t", header=None).to_records(index=False).tolist()
     return trainset_dp
 
 def read_del_trainset(dataset_name, beta, method, path):
