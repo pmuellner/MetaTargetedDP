@@ -180,14 +180,14 @@ def save_splits(path, name, X_train, T_train, X_test, T_test):
 
 dataset = "ml1m"
 PATH = "custom_datasets_prepared_rp/" + dataset + "/"
-method = "random_dp"
+method = "ister_dp"
 
 epsilons = [3, 2, 1, 0.1]
-betas = [0.8, 0.6, 0.4, 0.2, 0.0] #[1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
+betas = [0.8, 0.6, 0.4, 0.2]
 configs = list(product(epsilons, betas))
 for i, (e, b) in enumerate(configs):
     print("=============================================================")
-    print("Run e=%f, b=%f (%d/%d)" % (e, b, i+1, len(configs)))
+    print("Run %s e=%f, b=%f (%d/%d)" % (method, e, b, i+1, len(configs)))
     print("=============================================================")
     filename = dataset + ".train_e" + str(e) + "_b" + str(b) + "_" + method + ".rating"
 
