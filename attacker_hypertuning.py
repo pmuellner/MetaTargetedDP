@@ -180,16 +180,36 @@ def save_splits(path, name, X_train, T_train, X_test, T_test):
 
 dataset = "ml1m"
 PATH = "custom_datasets_prepared_rp/" + dataset + "/"
-method = "ister_dp"
+method = "ister_del"
+compute_baseline = False
 
-epsilons = [3, 2, 1, 0.1]
-betas = [0.8, 0.6, 0.4, 0.2]
+if method.endswith("_dp"):
+    epsilons = [3, 2, 1, 0.1]
+else:
+    epsilons = [np.inf]
+
+betas = [0.8, 0.6, 0.4, 0.2, 0]
 configs = list(product(epsilons, betas))
+if compute_baseline:
+    configs = [(np.inf, 1)] + configs
 for i, (e, b) in enumerate(configs):
     print("=============================================================")
     print("Run %s e=%f, b=%f (%d/%d)" % (method, e, b, i+1, len(configs)))
     print("=============================================================")
-    filename = dataset + ".train_e" + str(e) + "_b" + str(b) + "_" + method + ".rating"
+    # NoDP Baseline
+    if b == 1 and e == np.inf:
+        filename = dataset + ".train.rating"
+    elif b == 0:
+        # FullDP Baseline
+        if method.endswith("_dp"):
+            filename = dataset + ".train_e" + str(e) + "_b" + str(b) + "_random_dp.rating"
+        else:
+            filename = dataset + ".train_b" + str(b) + "_random_del.rating"
+    else:
+        if method.endswith("_dp"):
+            filename = dataset + ".train_e" + str(e) + "_b" + str(b) + "_" + method + ".rating"
+        else:
+            filename = dataset + ".train_b" + str(b) + "_" + method + ".rating"
 
     trainset = pd.read_csv(PATH + filename, sep="\t", header=None).to_records(index=False).tolist()
     user_attr_df = pd.read_csv(PATH + dataset + ".userlist", sep="\t")

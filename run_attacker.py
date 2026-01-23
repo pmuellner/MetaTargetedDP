@@ -115,21 +115,43 @@ def load_splits(path, name):
     return X_train, X_test, T_train, T_test
 
 dataset = "ml1m"
-method = "random_dp"
-
+method = "ister_del"
+compute_baseline = False
+if method.endswith("_dp"):
+    epsilons = [3, 2, 1, 0.1]
+else:
+    epsilons = [np.inf]
+betas = [0.8, 0.6, 0.4, 0.2, 0]
 results = []
-epsilons = [3]#[3, 2, 1, 0.1]
-betas = [0.8]#[0.8, 0.6, 0.4, 0.2, 0.0]
 configs = list(product(epsilons, betas))
+if compute_baseline:
+    configs = [(np.inf, 1)] + configs
 for i, (e, b) in enumerate(configs):
     print("=============================================================")
-    print("Run e=%f, b=%f (%d/%d)" % (e, b, i+1, len(configs)))
+    print("Run %s e=%f, b=%f (%d/%d)" % (method, e, b, i+1, len(configs)))
     print("=============================================================")
-    filename_template = dataset + ".train_e" + str(e) + "_b" + str(b) + "_" + method
-    X_train, X_test, T_train, T_test = load_splits(path="attacker/" + dataset, name=filename_template)
+
+    # NoDP Baseline
+    if b == 1 and e == np.inf:
+        filename = dataset + ".train"
+    elif b == 0:
+        # FullDP Baseline
+        if method.endswith("_dp"):
+            filename = dataset + ".train_e" + str(e) + "_b" + str(b) + "_random_dp"
+        else:
+            filename = dataset + ".train_b" + str(b) + "_random_del"
+    else:
+        if method.endswith("_dp"):
+            filename = dataset + ".train_e" + str(e) + "_b" + str(b) + "_" + method + ""
+        else:
+            filename = dataset + ".train_b" + str(b) + "_" + method + ""
+
+
+    #filename_template = dataset + ".train_e" + str(e) + "_b" + str(b) + "_" + method
+    X_train, X_test, T_train, T_test = load_splits(path="attacker/" + dataset, name=filename)
 
     # select best params
-    with open("attacker/" + dataset + "/" + filename_template + ".hypertuning", "rb") as f:
+    with open("attacker/" + dataset + "/" + filename + ".hypertuning", "rb") as f:
         hypertuning_results = pickle.load(f)
         best_val_bacc = -np.inf
         best_config = hypertuning_results[0]
