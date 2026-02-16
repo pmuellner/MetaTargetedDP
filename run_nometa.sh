@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=slurm_nometamf
+#SBATCH --job-name=nometamf
 #SBATCH --gres=gpu:1
 #SBATCH -p zen4_0768_h100x4
 #SBATCH --qos zen4_0768_h100x4

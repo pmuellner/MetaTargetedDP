@@ -121,6 +121,10 @@ class MetaMF(nn.Module):
         out = torch.matmul(out, model_weight[1])
         out = out+model_bias[1]
         out = torch.squeeze(out)
+
+        if out.dim() == 0:
+            out = out.unsqueeze(0)
+
         return out
     
     def loss(self, prediction, rating):

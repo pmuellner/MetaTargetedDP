@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=slurm_nometamf
+#SBATCH --job-name=bsl_nometa
 #SBATCH --gres=gpu:1
 #SBATCH -p zen4_0768_h100x4
 #SBATCH --qos zen4_0768_h100x4
@@ -12,4 +12,4 @@ conda activate metamf_dp
 echo "Using python: $( python --version ) from $( which python )"
 
 # now run your program using python from the conda environment:
-srun python3 /home/pm91887/MetaMF/run_baselines_nometa.sh
+srun python3 /home/pm91887/MetaMF/run_baselines_nometa.py

@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
 
     # run experiment(s)
-    dataset = "ml1m"
+    dataset = "ambar"
     PATH = "custom_datasets_prepared_rp/" + dataset
     traindata, valdata, testdata = read_raw_dataset(dataset, path=PATH)
     userlist, gendermap, itemlist = read_useranditemlist(dataset, path=PATH)
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                     loss = net.loss(pred, ratings)
 
                 loss.backward()
-                nn.utils.clip_grad_norm_(net.parameters(), 5)
+                nn.utils.clip_grad_norm_(net.parameters(), 5, foreach=False)
                 optimizer.step()
                 error += loss.detach().cpu().numpy() * len(users)
                 num += len(users)
@@ -135,7 +135,7 @@ if __name__ == "__main__":
                 "predictions": recommendations}
         results.append(res)
 
-    print(results)
+    #print(results)
     os.makedirs("hypertuning_results/" + dataset, exist_ok=True)
     file = open("hypertuning_results/" + dataset + "/" + model_name + ".hypertuning", "wb")
     pickle.dump(results, file)

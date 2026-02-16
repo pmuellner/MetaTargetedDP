@@ -10,7 +10,8 @@ def _apply_dp(dataset_df, item_pool, privacy_budget, rmin=1, rmax=5):
         keep_data = dataset_user_df.loc[np.random.choice(dataset_user_df.index, replace=False, size=n_keep)]
         new_dataset.extend(keep_data.to_records(index=False).tolist())
 
-        added_iids = np.random.choice(list(item_pool), replace=False, size=min(len(dataset_user_df) - n_keep, len(item_pool)))
+        neg_items = set(item_pool).difference(dataset_user_df["item_id:token"].unique())
+        added_iids = np.random.choice(list(neg_items), replace=False, size=min(len(dataset_user_df) - n_keep, len(neg_items)))
         rating_range = list(range(rmin, rmax + 1))
         add_data = [(user_id, item_id, np.random.choice(rating_range, replace=True)) for item_id in added_iids]
         new_dataset.extend(add_data)
@@ -115,7 +116,109 @@ def item_stereotypicality_sampling_del(dataset_df, user_info_df, beta=None, thre
     # compute i_ster score
     ister_scores = dict()
     for iid in dataset_df["item_id:token"].unique():
-        if "F" not in igi_score.loc[iid] or 1 not in igi_score.loc[iid]:
+        #if "F" not in igi_score.loc[iid] or 1 not in igi_score.loc[iid]:
+        if 0 not in igi_score.loc[iid] or 1 not in igi_score.loc[iid]:
+            ister_scores[iid] = 0
+        else:
+            diff = igi_score.loc[iid][0] - igi_score.loc[iid][1]
+            ister_scores[iid] = diff / max(igi_score.loc[iid][0], igi_score.loc[iid][1])
+
+    new_dataset = []
+    for user_id, user_data_df in dataset_df.groupby("user_id:token"):
+        if beta is not None:
+            n_public = max(1, np.ceil(len(user_data_df) * beta).astype(int))
+        else:
+            n_public = np.inf
+
+        user_item_scores = [(iid, ister_scores[iid]) for iid in user_data_df["item_id:token"].unique()]
+        if user_info_df[user_info_df["user_id:token"] == user_id]["attr:token"].values[0] == 1:
+            if threshold:
+                public_iids = [iid for iid, score in user_item_scores if score >= threshold]
+            else:
+                public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=True)[:n_public]]
+                #public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=False)[:n_public]]
+        else:
+            if threshold:
+                public_iids = [iid for iid, score in user_item_scores if score <= threshold]
+            else:
+                public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=False)[:n_public]]
+                #public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=True)[:n_public]]
+
+        public_data_df = user_data_df[user_data_df["item_id:token"].isin(public_iids)]
+        public_data = public_data_df.to_records(index=False)
+        new_dataset.extend(public_data)
+
+    return pd.DataFrame.from_records(new_dataset, columns=["user_id:token", "item_id:token", "rating:float"])
+
+def hybrid_dp(dataset_df, user_info_df, epsilon, rmin, rmax, beta=None, threshold=None):
+    if beta is not None and threshold is not None:
+        print("Please select either beta or threshold!")
+        return pd.DataFrame()
+
+    item_pool = dataset_df["item_id:token"].unique()
+
+    # compute igi score
+    merged_df = pd.merge(dataset_df, user_info_df, left_on="user_id:token", right_on="user_id:token")
+    item_attr_interactions_df = merged_df[["item_id:token", "attr:token"]]
+    item_attr_dist = item_attr_interactions_df.groupby(["item_id:token", "attr:token"]).size()
+    attr_dist = item_attr_interactions_df.groupby("attr:token").size()
+    igi_score = item_attr_dist / attr_dist
+
+    # compute i_ster score
+    ister_scores = dict()
+    for iid in dataset_df["item_id:token"].unique():
+        if 0 not in igi_score.loc[iid] or 1 not in igi_score.loc[iid]:
+            ister_scores[iid] = 0
+        else:
+            diff = igi_score.loc[iid][0] - igi_score.loc[iid][1]
+            ister_scores[iid] = diff / max(igi_score.loc[iid][0], igi_score.loc[iid][1])
+
+    new_dataset = []
+    for user_id, user_data_df in dataset_df.groupby("user_id:token"):
+        if beta is not None:
+            n_public = np.ceil(len(user_data_df) * (1-beta)).astype(int)
+        else:
+            n_public = np.inf
+
+        user_item_scores = [(iid, ister_scores[iid]) for iid in user_data_df["item_id:token"].unique()]
+        if user_info_df[user_info_df["user_id:token"] == user_id]["attr:token"].values[0] == 1:
+            if threshold:
+                public_iids = [iid for iid, score in user_item_scores if score >= threshold]
+            else:
+                public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=True)[:n_public]]
+        else:
+            if threshold:
+                public_iids = [iid for iid, score in user_item_scores if score <= threshold]
+            else:
+                public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=False)[:n_public]]
+
+        public_data_df = user_data_df[user_data_df["item_id:token"].isin(public_iids)]
+        private_idxs = list(set(user_data_df.index).difference(public_data_df.index))
+        private_data = _apply_dp(dataset_df=user_data_df.loc[private_idxs], item_pool=item_pool, privacy_budget=epsilon,
+                                 rmin=rmin, rmax=rmax)
+
+        new_dataset.extend(private_data)
+
+    return pd.DataFrame.from_records(new_dataset, columns=["user_id:token", "item_id:token", "rating:float"])
+
+def hybrid_del(dataset_df, user_info_df, epsilon, rmin, rmax, beta=None, threshold=None):
+    if beta is not None and threshold is not None:
+        print("Please select either beta or threshold!")
+        return pd.DataFrame()
+
+    item_pool = dataset_df["item_id:token"].unique()
+
+    # compute igi score
+    merged_df = pd.merge(dataset_df, user_info_df, left_on="user_id:token", right_on="user_id:token")
+    item_attr_interactions_df = merged_df[["item_id:token", "attr:token"]]
+    item_attr_dist = item_attr_interactions_df.groupby(["item_id:token", "attr:token"]).size()
+    attr_dist = item_attr_interactions_df.groupby("attr:token").size()
+    igi_score = item_attr_dist / attr_dist
+
+    # compute i_ster score
+    ister_scores = dict()
+    for iid in dataset_df["item_id:token"].unique():
+        if 0 not in igi_score.loc[iid] or 1 not in igi_score.loc[iid]:
             ister_scores[iid] = 0
         else:
             diff = igi_score.loc[iid][0] - igi_score.loc[iid][1]
@@ -141,29 +244,41 @@ def item_stereotypicality_sampling_del(dataset_df, user_info_df, beta=None, thre
                 public_iids = [iid for iid, _ in sorted(user_item_scores, key=lambda t: t[1], reverse=False)[:n_public]]
 
         public_data_df = user_data_df[user_data_df["item_id:token"].isin(public_iids)]
-        public_data = public_data_df.to_records(index=False)
+        public_data = _apply_dp(dataset_df=user_data_df.loc[public_data_df.index], item_pool=item_pool, privacy_budget=epsilon,
+                                 rmin=rmin, rmax=rmax)
         new_dataset.extend(public_data)
 
     return pd.DataFrame.from_records(new_dataset, columns=["user_id:token", "item_id:token", "rating:float"])
 
 
+
 if __name__ == '__main__':
     DATASET = "ml1m"
-    df = pd.read_csv(DATASET + "/" + DATASET + ".train.inter", sep="\t")
-    user_df = pd.read_csv(DATASET + "/" + DATASET + ".user", sep="\t")
+    PATH = "../custom_datasets_prepared_rp/" + DATASET + "/"
+    df = pd.read_csv(PATH + DATASET + ".train.rating", sep="\t", header=None)
+    df.columns = ["user_id:token", "item_id:token", "rating:float"]
 
-    betas = [0.8, 0.6, 0.4, 0.2, 0.0]
-    epsilons = [0.01, 0.1, 1, 2, 3, 4, 5]
+    user_attr_df = pd.read_csv(PATH + DATASET + ".userlist", sep="\t")
+    #user_attr_map = user_attr_df.set_index("user_id:token")["attr:token"].to_dict()
+
+    betas = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
+    #epsilons = [0.1, 1, 2, 3]
     for beta in betas:
-        for epsilon in epsilons:
-            print("random_sampling_dp (e=%f, b=%f) ..." % (epsilon, beta))
-            random_sampling_dp(dataset_df=df, beta=beta, epsilon=epsilon, rmin=1, rmax=5)
-            print("item_stereotypicality_sampling_dp (e=%f, b=%f) ..." % (epsilon, beta))
-            item_stereotypicality_sampling_dp(dataset_df=df, user_info_df=user_df, beta=beta, epsilon=1, rmin=1, rmax=5)
-            print()
+        train_dp_df = item_stereotypicality_sampling_del(dataset_df=df, user_info_df=user_attr_df, beta=beta)
+        train_dp_df.to_csv(PATH + "/" + DATASET + ".train_b" + str(beta) + "_ister_del" + ".rating", sep="\t", index=False,
+                           header=False)
+"""train_dp_df.to_csv(PATH + "/" + DATASET + ".train_e" + str(epsilon) + "_b" + str(beta) + "_hybrid_dp" + ".rating",
+                               sep="\t", index=False, header=False)
 
-        print("random_sampling_del (b=%f) ..." % beta)
-        random_sampling_del(dataset_df=df, beta=beta)
-        print("item_stereotypicality_sampling_del (b=%f) ..." % beta)
-        item_stereotypicality_sampling_del(dataset_df=df, user_info_df=user_df, beta=beta)
-        print()
+            train_dp_df = pd.read_csv(PATH + "/" + DATASET + ".train_e" + str(epsilon) + "_b" + str(beta) + "_hybrid_del"
+                                      + ".rating", sep="\t")
+            print(len(train_dp_df) / len(df))
+
+            print("hybrid_del (b=%f) ..." % (beta))
+            train_dp_df = hybrid_del(dataset_df=df, user_info_df=user_attr_df, beta=beta, epsilon=epsilon, rmin=1, rmax=5)
+            train_dp_df.to_csv(PATH + "/" + DATASET + ".train_e" + str(epsilon) + "_b" + str(beta) + "_hybrid_del" + ".rating",
+                               sep="\t", index=False, header=False)
+            train_dp_df = pd.read_csv(PATH + "/" + DATASET + ".train_e" + str(epsilon) + "_b" + str(beta) + "_hybrid_del"
+                                      + ".rating", sep="\t")
+            print(len(train_dp_df) / len(df))
+            print()"""

@@ -10,6 +10,7 @@ class EarlyStopper:
         self.min_delta = min_delta
         self.counter = 0
         self.min_validation_loss = float('inf')
+        self.bigger_better = False
 
     def early_stop(self, validation_loss):
         if validation_loss < self.min_validation_loss:

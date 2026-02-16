@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
 
     # run experiment(s)
-    dataset = "ml1m"
+    dataset = "ambar"
     PATH = "custom_datasets_prepared_rp/" + dataset
     traindata, valdata, testdata = read_raw_dataset(dataset, path=PATH)
     userlist, gendermap, itemlist = read_useranditemlist(dataset, path=PATH)
@@ -48,11 +48,11 @@ if __name__ == "__main__":
     #valdata = valdata[:1000]
     #testdata = testdata[:1000]
 
-    learning_rate = 0.001
+    learning_rate = 0.0001
     regularization_factor = 0.0001
     batch_size = 64
     model_name = "NoMetaMF"
-    method = "random_del"
+    method = "random_dp"
     if method.endswith("_dp"):
         DP = True
     else:

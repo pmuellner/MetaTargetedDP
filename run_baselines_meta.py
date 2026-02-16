@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
 
     # run experiment(s)
-    dataset = "ml1m"
+    dataset = "ambar"
     PATH = "custom_datasets_prepared_rp/" + dataset
     traindata, valdata, testdata = read_raw_dataset(dataset, path=PATH)
     userlist, gendermap, itemlist = read_useranditemlist(dataset, path=PATH)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     #testdata = testdata[:1000]
 
     learning_rate = 0.0001
-    regularization_factor = 0.001
+    regularization_factor = 0.0001
     batch_size = 64
     model_name = "MetaMF"
     method = "baseline"
