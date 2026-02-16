@@ -78,6 +78,7 @@ def run_attacker(x_train, t_train, x_test, t_test, hyperparameters):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
     early_stopper = EarlyStopper(patience=10, min_delta=0)
+    test_error_per_epoch = []
     for epoch in range(1000):
         total_loss = 0
         for inputs, labels in train_loader:
@@ -99,9 +100,9 @@ def run_attacker(x_train, t_train, x_test, t_test, hyperparameters):
             loss = criterion(outputs, labels.long())
             total_test_loss += loss
 
-        #if epoch % 10 == 0:
-        #    print(f"Epoch {epoch}, Train Loss: {total_loss:.4f}, Test Loss : {total_test_loss:.4f}")
 
+        #print(f"Epoch {epoch}, Train Loss: {total_loss:.4f}, Test Loss : {total_test_loss:.4f}")
+        test_error_per_epoch.append(total_test_loss)
         if early_stopper.early_stop(total_test_loss):
             #print(f"Epoch {epoch}, Train Loss: {total_loss:.4f}, Test Loss : {total_test_loss:.4f}")
             break
@@ -147,13 +148,13 @@ def tune_attacker(data, target):
         cv = StratifiedKFold(n_splits=5)
         bacc_val_c = []
         for f, (train, val) in enumerate(cv.split(data, target)):
-            #print("Fold %d ..." % (f+1))
+            print("Fold %d ..." % (f+1))
             x_train, t_train = data[train], target[train]
             x_val, t_val = data[val], target[val]
             bacc_train, bacc_val, _ = run_attacker(x_train=x_train, t_train=t_train, x_test=x_val, t_test=t_val, hyperparameters={"n_hidden": n_hidden, "batch_size": batch_size, "lr": lr})
             bacc_val_c.append(bacc_val)
         bacc_val_c = np.mean(bacc_val_c)
-        print("BAcc: %f (Val)" % bacc_val_c)
+        #print("BAcc: %f (Val)" % bacc_val_c)
         results.append({"n_hidden": n_hidden, "batch_size": batch_size, "lr": lr, "avg_bacc_val": bacc_val_c})
         print()
 
@@ -163,7 +164,7 @@ def tune_attacker(data, target):
         if r["avg_bacc_val"] > best_val_bacc:
             best_val_bacc = r["avg_bacc_val"]
             best_config = r
-    print(best_config)
+    #print(best_config)
     return results, best_config
 
 def save_splits(path, name, X_train, T_train, X_test, T_test):
@@ -178,9 +179,10 @@ def save_splits(path, name, X_train, T_train, X_test, T_test):
         pickle.dump(T_test, file)
 
 
+save = False
 dataset = "ml1m"
 PATH = "custom_datasets_prepared_rp/" + dataset + "/"
-method = "ister_del"
+method = "random_del"
 compute_baseline = False
 
 if method.endswith("_dp"):
@@ -222,10 +224,16 @@ for i, (e, b) in enumerate(configs):
     X_train, X_test, t_train, t_test = train_test_split(R, T, test_size=0.2, stratify=T)
     path = "attacker/" + dataset
     name = filename.replace(".rating", "")
-    save_splits(path=path, name=name, X_train=X_train, T_train=t_train, X_test=X_test, T_test=t_test)
-
     hypertuning_results, best_config = tune_attacker(X_train, t_train)
-    os.makedirs("attacker/" + dataset, exist_ok=True)
-    with open("attacker/" + dataset + "/" + filename.replace(".rating", "") + ".hypertuning", "wb") as f:
-        pickle.dump(hypertuning_results, f)
-    print()
+
+    print(best_config)
+
+    if save:
+        print("save splits and results")
+        save_splits(path=path, name=name, X_train=X_train, T_train=t_train, X_test=X_test, T_test=t_test)
+        os.makedirs("attacker/" + dataset, exist_ok=True)
+        with open("attacker/" + dataset + "/" + filename.replace(".rating", "") + ".hypertuning", "wb") as f:
+            pickle.dump(hypertuning_results, f)
+        print()
+    else:
+        print("splits and results not saved")

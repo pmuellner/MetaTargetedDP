@@ -59,7 +59,7 @@ def run_attacker(x_train, t_train, x_test, t_test, hyperparameters):
 
             total_loss += loss.item()
 
-        # compute validation loss
+        # compute test loss
         model.eval()
         total_test_loss = 0
         for inputs, labels in test_loader:
@@ -70,6 +70,7 @@ def run_attacker(x_train, t_train, x_test, t_test, hyperparameters):
         #if epoch % 10 == 0:
         #    print(f"Epoch {epoch}, Train Loss: {total_loss:.4f}, Test Loss : {total_test_loss:.4f}")
 
+        # todo change that
         if early_stopper.early_stop(total_test_loss):
             #print(f"Epoch {epoch}, Train Loss: {total_loss:.4f}, Test Loss : {total_test_loss:.4f}")
             break
@@ -115,7 +116,7 @@ def load_splits(path, name):
     return X_train, X_test, T_train, T_test
 
 dataset = "ml1m"
-method = "ister_del"
+method = "random_dp"
 compute_baseline = False
 if method.endswith("_dp"):
     epsilons = [3, 2, 1, 0.1]
