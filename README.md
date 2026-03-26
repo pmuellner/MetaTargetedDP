@@ -23,15 +23,30 @@ hyperparameter_tuning_meta.py
 ```
 hyperparameter_tuning_nometa.py
 ```
-Then, the best hyperparameters (lowest MAE on the validation-set) can be selected via
+Then, the best hyperparameters (lowest MAE on the validation-set) can be selected and saved via
 ```
 hypertuning_results/hypertuning_results.ipynb
 ```
-
-* <i>run_recommender.py</i> runs the recommendation model on a given dataset
-* <i>attacker.py</i> runs the neural attacker on a given dataste
-
-
+* <i>Run Recommendation Experiments</i>: Perform all recommendation experiments present in the paper, i.e., use MetaMF and NoMetaMF for both datasets, different $\epsilon$-values, different $\beta$-values and random or targeted application of DP. For example, 
+```
+run_recommender.py --model MetaMF --dataset ml1m --random_dp --seed "0 1 2"
+```
+The results can be analyzed via
+```
+results/analysis_meta_nometa.py
+```
+* <i>Run Attacker</i>: Run the neural attacker to quantify the emprical privacy risk. This can be done for both datasets, different $\epsilon$-values, different $\beta$-values and random or targeted application of DP. ALso, no hypertuning can be performed, for every run, or only for the first run. For example,
+```
+attacker.py --dataset ml1m --method random_dp --hypertuning first
+```
+The results can be analyzed via
+```
+results/analysis_attacker.py
+```
+* <i>Analyze the Trade-Off</i>: The final trade-off between recommendation accuracy and empirical privacy risk can be plotted via
+```
+results/analysis_tradeoff.py
+```
 
 ## Requirements
 
