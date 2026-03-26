@@ -10,6 +10,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from utils import EarlyStopper
 import pickle as pkl
+import sys
+import os
+import argparse
 
 class AttackerNetwork(nn.Module):
     def __init__(self, input_size, hidden_size):
@@ -150,25 +153,47 @@ def sampling_dp(method, X, t, rmin, rmax, b, e):
     data = generate_records(X)
     X_df = pd.DataFrame.from_records(data, columns=["user_id:token", "item_id:token", "rating:token"])
 
-    if method == "ister_dp":
-        t_train_df = pd.DataFrame()
-        t_train_df["user_id:token"] = list(range(len(t)))
-        t_train_df["attr:token"] = t
-        dp_df = item_stereotypicality_sampling_dp(dataset_df=X_df, user_info_df=t_train_df, rmin=rmin, rmax=rmax, beta=b, epsilon=e)
+    if e < np.inf:
+        if method == "ister_dp":
+            t_train_df = pd.DataFrame()
+            t_train_df["user_id:token"] = list(range(len(t)))
+            t_train_df["attr:token"] = t
+            dp_df = item_stereotypicality_sampling_dp(dataset_df=X_df, user_info_df=t_train_df, rmin=rmin, rmax=rmax, beta=b, epsilon=e)
+        else:
+            dp_df = random_sampling_dp(dataset_df=X_df, rmin=rmin, rmax=rmax, beta=b, epsilon=e)
     else:
-        dp_df = random_sampling_dp(dataset_df=X_df, rmin=rmin, rmax=rmax, beta=b, epsilon=e)
+        dp_df = X_df
 
     return dp_df
 
 
 if __name__ == "__main__":
-    hypertuning = True
-    DATASET = "bx"
-    METHOD = "random_dp"
+    """DATASET = "ml1m"
+    METHOD = "ister_dp"
+    hypertuning = "no"""
+
+    CLI = argparse.ArgumentParser()
+    CLI.add_argument("--dataset", type=str, default="ml1m", choices=["ml1m", "bx", "ambar"])
+    CLI.add_argument("--method", type=str, default="baseline", choices=["ister_dp", "random_dp", "baseline"])
+    CLI.add_argument("--hypertuning", type=str, default="first", choices=["first", "full", "no"])
+    args = CLI.parse_args()
+
+    DATASET = args.dataset
+    METHOD = args.method
+    hypertuning = args.hypertuning
+
+    """print('Argument List:', str(sys.argv))
+    if len(sys.argv) == 4:
+        DATASET = sys.argv[1]
+        METHOD = sys.argv[2]
+        hypertuning = sys.argv[3]
+
+    print(DATASET, METHOD, hypertuning)"""
+
     PATH = "custom_datasets_prepared_rp/" + DATASET + "/"
 
     print("=============================================================================")
-    print("Dataset: %s, Sampling Method: %s, Hypertuning: %s" % (DATASET, METHOD, "yes" if hypertuning else "no"))
+    print("Dataset: %s, Sampling Method: %s, Hypertuning: %s" % (DATASET, METHOD, hypertuning))
     print("=============================================================================")
 
     if DATASET == "bx":
@@ -178,8 +203,18 @@ if __name__ == "__main__":
 
     best_params = {'lr': 0.0001, 'n_hidden': 32, 'batch_size': 64}
 
-    dataset_df = pd.read_csv(PATH + DATASET + ".dataset.rating", sep="\t", header=None, names=["user_id", "item_id", "rating"])
-    users_df = pd.read_csv(PATH + DATASET + ".userlist", sep="\t")
+    #dataset_df = pd.read_csv(PATH + DATASET + ".dataset.rating", sep="\t", header=None, names=["user_id", "item_id", "rating"])
+    #users_df = pd.read_csv(PATH + DATASET + ".userlist", sep="\t")
+
+    dataset_df = pd.read_csv("custom_datasets_prepared_rp/only_stereotypical_users/" + DATASET + ".dataset.rating",
+                             sep="\t", header=None, names=["user_id", "item_id", "rating"])
+    users_df = pd.read_csv("custom_datasets_prepared_rp/only_stereotypical_users/" + DATASET + ".userlist", sep="\t")
+
+    print(dataset_df.head())
+    print(len(dataset_df), dataset_df["user_id"].nunique(), dataset_df["item_id"].nunique())
+
+    print(users_df.head())
+    print(len(users_df), users_df["user_id:token"].nunique(), users_df["attr:token"].value_counts())
 
     n_users = dataset_df["user_id"].nunique()
     n_items = dataset_df["item_id"].nunique()
@@ -189,10 +224,28 @@ if __name__ == "__main__":
     data = dataset_df.to_records(index=False).tolist()
     X = generate_dense_matrix(data=data, n_users=n_users, n_items=n_items)
 
-    epsilons = [0.1]#, 3]
-    betas = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
+    if METHOD == "baseline":
+        betas = [0]
+        #epsilons = [3, 2, 1, 0.1]
+        epsilons = [0.1]
+        configs = cartesian(epsilons, betas)
+        # add nodp baseline
+        configs = [(np.inf, 1)] + list(configs)
+    else:
+        #epsilons = [3, 2, 1, 0.1]
+        epsilons = [0.1]
+        betas = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+        #betas = [0.8, 0.6, 0.4, 0.2]
+        configs = cartesian(epsilons, betas)
+
+
+    if hypertuning == "no":
+        do_hypertuning = False
+    else:
+        do_hypertuning = True
+
     results = []
-    for cid, (e, b) in enumerate(list(cartesian(epsilons, betas))):
+    for cid, (e, b) in enumerate(configs):
         print("--------------------------------------")
         print("Epsilon: %f, Beta: %f" % (e, b))
 
@@ -204,7 +257,7 @@ if __name__ == "__main__":
             X_trainval, X_test, t_trainval, t_test = train_test_split(X, t, test_size=0.2, stratify=t)
             X_train, X_val, t_train, t_val = train_test_split(X_trainval, t_trainval, test_size=0.25, stratify=t_trainval)
 
-            if hypertuning:
+            if do_hypertuning:
                 print("Hypertuning ", end='')
                 lr_space = [0.00001, 0.0001]
                 n_hidden_space = [16, 32, 64]
@@ -226,8 +279,9 @@ if __name__ == "__main__":
                         best_params = {"lr": lr, "n_hidden": n_hidden, "batch_size": batch_size, "weight_decay": weight_decay}
 
                 print(best_params)
-                # only do hypertuning on first run
-                hypertuning = False
+                if hypertuning == "first":
+                    # only do hypertuning on first run
+                    do_hypertuning = False
 
             print("\n")
 
@@ -249,8 +303,14 @@ if __name__ == "__main__":
         print()
         results.append(averages)
 
-        # activate hypertuning for next e and b
-        hypertuning = True
+        if hypertuning != "no":
+            # activate hypertuning for next e and b
+            do_hypertuning = True
 
-    with open("results/" + DATASET + "/attacker." + METHOD, "wb") as f:
+    #todo
+    os.makedirs("results/" + DATASET, exist_ok=True)
+    with open("results/" + DATASET + "/attacker.only_stereo." + METHOD, "wb") as f:
         pkl.dump(results, f)
+    """os.makedirs("results/" + DATASET, exist_ok=True)
+    with open("results/" + DATASET + "/attacker." + METHOD, "wb") as f:
+        pkl.dump(results, f)"""

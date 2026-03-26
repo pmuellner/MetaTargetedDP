@@ -19,6 +19,17 @@ from torch.utils.data import DataLoader
 from itertools import product as cartesian_product
 
 if __name__ == "__main__":
+    DATASET = "ml1m"
+    METHOD = "ister_dp"
+    SEED = 0
+
+    print('Argument List:', str(sys.argv))
+    if len(sys.argv) == 4:
+        DATASET = sys.argv[1]
+        METHOD = sys.argv[2]
+        SEED = sys.argv[3]
+    print(DATASET, METHOD, SEED)
+
     if torch.cuda.is_available():
         use_cuda = True
     else:
@@ -28,16 +39,14 @@ if __name__ == "__main__":
     if use_cuda:
         print("Current device: %d" % torch.cuda.current_device())
 
-    random.seed(1)
-    np.random.seed(1)
-    torch.manual_seed(1)  # set random seed for cpu
-    torch.cuda.manual_seed(1)  # set random seed for current gpu
-    torch.cuda.manual_seed_all(1)  # set random seed for all gpus
-
-
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)  # set random seed for cpu
+    torch.cuda.manual_seed(SEED)  # set random seed for current gpu
+    torch.cuda.manual_seed_all(SEED)  # set random seed for all gpus
 
     # run experiment(s)
-    dataset = "ambar"
+    dataset = DATASET
     PATH = "custom_datasets_prepared_rp/" + dataset
     traindata, valdata, testdata = read_raw_dataset(dataset, path=PATH)
     userlist, gendermap, itemlist = read_useranditemlist(dataset, path=PATH)

@@ -61,23 +61,19 @@ def preprocess_data(dataset_name):
         df = pd.read_csv("ambar/ratings_info.csv")
         df.columns = ["user_id", "item_id", "rating"]
 
-        print(df["rating"].unique())
-
         users_df = pd.read_csv("ambar/users_info.csv")
         users_df.columns = ["user_id", "country", "gender", "continent"]
 
         users_df["gender"] = (users_df["gender"] == "M").astype(int)
         users_df.rename(columns={"gender": "attr"}, inplace=True)
 
-        # todo
-        users_df = users_df.sample(n=10000)
+        users_df.drop_duplicates(subset=["user_id"], inplace=True)
+        users_df = users_df.sample(n=10000, replace=False)
 
         items_df = pd.read_csv("ambar/tracks_info.csv")
         items_df.columns = ["item_id", "artist_id", "duration", "styles", "category_styles"]
         items_df.drop(columns=["artist_id", "duration", "styles", "category_styles"], inplace=True)
 
-        # todo
-        #items_df = items_df.sample(n=25000)
 
         merged_df = pd.merge(left=df, right=users_df, left_on="user_id", right_on="user_id")
         merged_df = pd.merge(left=merged_df, right=items_df, left_on="item_id", right_on="item_id")
@@ -110,11 +106,6 @@ def preprocess_data(dataset_name):
         # remove implicit ratings
         df = df[df["rating"] > 0]
 
-        #user_profile_size = df.groupby("user_id").size()
-        #valid_users = user_profile_size[user_profile_size < 200].index
-        #print(valid_users)
-        #df = df[df["user_id"].isin(valid_users)]
-
         # merging
         merged_df = pd.merge(left=df, right=users_df, left_on="user_id", right_on="user_id")
         merged_df = pd.merge(left=merged_df, right=items_df, left_on="item_id", right_on="item_id")
@@ -123,7 +114,6 @@ def preprocess_data(dataset_name):
         # pruning
         merged_df = k_core_pruning(merged_df, k=5)
 
-        #merged_df = merged_df[(merged_df["age"] >= 18) & (merged_df["age"] <= 85)]
         threshold = users_df["age"].median()
         print("BX Age Threshold: %f" % threshold)
         merged_df["age"] = (merged_df["age"] >= threshold).astype(int)
@@ -171,14 +161,8 @@ def print_stats(dataset_df):
     print()
 
 if __name__ == '__main__':
-    #df = pd.read_csv("../custom_datasets_prepared_rp/ambar/ambar.dataset.rating", sep="\t", header=None, names=["user_id", "item_id", "rating"])
-    #print_stats(df)
-    #exit()
-
-
-
     # read raw data
-    DATASET = "ambar"
+    DATASET = "ml1m"
     if DATASET == "ml1m":
         print("=== ML-1M ===")
         df, users_df, items_df = preprocess_data("ml1m")
@@ -202,6 +186,7 @@ if __name__ == '__main__':
         users_df = pd.DataFrame()
         items_df = pd.DataFrame()
         attr = ""
+
 
     df = df.sample(frac=1)
     profile_size = df.groupby("user_id").size()
@@ -232,7 +217,9 @@ if __name__ == '__main__':
 
     print_stats(pd.concat([train_df, val_df, test_df]))
 
-    #exit()
+    print(users_df.groupby("attr:token").size() / len(users_df))
+
+    exit()
 
     # save splits without DP (beta=1)
     PATH = "../custom_datasets_prepared_rp/" + DATASET
@@ -246,7 +233,7 @@ if __name__ == '__main__':
     items_df.to_csv("../custom_datasets_prepared_rp/" + DATASET + "/" + DATASET + ".itemlist", sep="\t", index=False, header=False, columns=["item_id:token"])
 
     betas = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
-    epsilons = [3, 0.1]#[0.1, 1, 2, 3]
+    epsilons = [0.1, 1, 2, 3]
     print("dp data ...")
     for b in betas:
         for e in epsilons:

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=metamf
+#SBATCH --job-name=recommender
 #SBATCH --gres=gpu:1
 #SBATCH -p zen4_0768_h100x4
 #SBATCH --qos zen4_0768_h100x4
@@ -13,4 +13,4 @@ echo "Using python: $( python --version ) from $( which python )"
 
 # now run your program using python from the conda environment:
 #python run_model_meta.py
-srun python3 /home/pm91887/MetaMF/run_model_meta.py
+srun --unbuffered python3 /home/pm91887/MetaMF/run_recommender.py $*
