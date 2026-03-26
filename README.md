@@ -54,4 +54,4 @@ results/analysis_tradeoff.py
 * Dominik Kowald, Know-Center GmbH and Graz University, Graz
 * Elisabeth Lex, Graz University of Technology, Graz
 
-[1] Lin, Y., Ren, P., Chen, Z., Ren, Z., Yu, D., Ma, J., ... & Cheng, X. (2020, July). Meta matrix factorization for federated rating predictions. In Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval (pp. 981-990).
+[1] Lin, Yujie, et al. "Meta matrix factorization for federated rating predictions." Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval. 2020.
