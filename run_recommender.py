@@ -6,7 +6,6 @@ import torch
 import pandas as pd
 from MetaMF import *
 from datetime import datetime as dt
-#import matplotlib.pyplot as plt
 from collections import defaultdict
 from datetime import datetime as dt
 import os.path

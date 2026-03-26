@@ -30,16 +30,10 @@ if __name__ == "__main__":
 
 
     # run experiment(s)
-    dataset = "ambar"
+    dataset = "bx"
     PATH = "custom_datasets_prepared_rp/" + dataset
     traindata, valdata, testdata = read_raw_dataset(dataset, path=PATH)
     userlist, gendermap, itemlist = read_useranditemlist(dataset, path=PATH)
-
-
-    # todo
-    #traindata = traindata[:1000]
-    #valdata = valdata[:1000]
-    #testdata = testdata[:1000]
 
     learning_rates = [0.00001, 0.0001, 0.001]
     regularization_factors = [0.0001, 0.001, 0.01]
@@ -133,7 +127,6 @@ if __name__ == "__main__":
                 "predictions": recommendations}
         results.append(res)
 
-    #print(results)
     os.makedirs("hypertuning_results/" + dataset, exist_ok=True)
     file = open("hypertuning_results/" + dataset + "/" + model_name + ".hypertuning", "wb")
     pickle.dump(results, file)

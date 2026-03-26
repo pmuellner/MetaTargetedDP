@@ -7,6 +7,8 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
+# source-code provided by Lin et al.
+
 class MetaRecommender(nn.Module):
     def __init__(self, user_num, item_num, item_emb_size=32, item_mem_num=8, user_emb_size=32, mem_size=128, hidden_size=512):
         super(MetaRecommender, self).__init__()

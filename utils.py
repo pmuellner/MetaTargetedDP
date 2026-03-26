@@ -4,6 +4,8 @@ from torch.utils.data import Dataset
 from copy import deepcopy
 from collections import defaultdict
 
+
+
 class EarlyStopper:
     def __init__(self, patience=1, min_delta=0):
         self.patience = patience
@@ -22,7 +24,6 @@ class EarlyStopper:
                 return True
         return False
 
-
 def read_raw_dataset(dataset_name, path):
     trainset = pd.read_csv(path + "/" + dataset_name + ".train.rating", sep="\t", header=None).to_records(index=False).tolist()
     valset = pd.read_csv(path + "/" + dataset_name + ".val.rating", sep="\t", header=None).to_records(index=False).tolist()
@@ -36,10 +37,6 @@ def read_dp_trainset(dataset_name, epsilon, beta, method, path):
     else:
         trainset_dp = pd.read_csv(path + "/" + dataset_name + ".train_e" + str(epsilon) + "_b" + str(beta) + "_" + method + ".rating", sep="\t", header=None).to_records(index=False).tolist()
     return trainset_dp
-
-def read_del_trainset(dataset_name, beta, method, path):
-    trainset_del = pd.read_csv(path + "/" + dataset_name + ".train_b" + str(beta) + "_" + method + ".rating", sep="\t", header=None).to_records(index=False).tolist()
-    return trainset_del
 
 def read_useranditemlist(dataset_name, path):
     users_df = pd.read_csv(path + "/" + dataset_name + ".userlist", sep="\t")
@@ -111,14 +108,6 @@ def evaluate(model, data, batch_size, use_cuda, save_predictions=False):
     else:
         return mae, mse
 
-
-class CustomDataset(Dataset):
-    def __init__(self, data):
-        self.data = data
-    def __len__(self):
-        return len(self.data)
-    def __getitem__(self, idx):
-        return self.data[idx]
 
 def topk_items_per_user(predictions, k=10):
     predictions_per_user = defaultdict(list)
