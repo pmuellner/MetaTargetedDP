@@ -56,43 +56,6 @@ def preprocess_data(dataset_name):
         items_df.rename(columns={"item_id": "item_id:token", "movie_title": "movie_title:token_seq",
                                  "release_year": "release_year:token", "genres": "genre:token_seq"}, inplace=True)
 
-
-    elif dataset_name == "ambar":
-        df = pd.read_csv("ambar/ratings_info.csv")
-        df.columns = ["user_id", "item_id", "rating"]
-
-        users_df = pd.read_csv("ambar/users_info.csv")
-        users_df.columns = ["user_id", "country", "gender", "continent"]
-
-        users_df["gender"] = (users_df["gender"] == "M").astype(int)
-        users_df.rename(columns={"gender": "attr"}, inplace=True)
-
-        users_df.drop_duplicates(subset=["user_id"], inplace=True)
-        users_df = users_df.sample(n=10000, replace=False)
-
-        items_df = pd.read_csv("ambar/tracks_info.csv")
-        items_df.columns = ["item_id", "artist_id", "duration", "styles", "category_styles"]
-        items_df.drop(columns=["artist_id", "duration", "styles", "category_styles"], inplace=True)
-
-
-        merged_df = pd.merge(left=df, right=users_df, left_on="user_id", right_on="user_id")
-        merged_df = pd.merge(left=merged_df, right=items_df, left_on="item_id", right_on="item_id")
-        merged_df.dropna(inplace=True)
-
-        # pruning
-        merged_df = k_core_pruning(merged_df, k=25)
-
-        users_df = merged_df[["user_id", "country", "attr", "continent"]].copy()
-        users_df.rename(columns={"user_id": "user_id:token", "country": "country:token", "attr": "attr:token",
-                                 "continent": "continent:token"}, inplace=True)
-        items_df = merged_df[["item_id"]].copy()
-        items_df.rename(
-            columns={"item_id": "item_id:token"}, inplace=True)
-        df = merged_df[["user_id", "item_id", "rating"]].copy()
-
-        users_df.drop_duplicates(inplace=True)
-        items_df.drop_duplicates(inplace=True)
-
     elif dataset_name == "bx":
         users_df = pd.read_csv("bx/Users.csv", sep=";").dropna()
         users_df.columns = ["user_id", "age"]
@@ -169,12 +132,6 @@ if __name__ == '__main__':
         print_stats(df)
         attr = "gender:token"
         rmin, rmax = 1, 5
-    elif DATASET == "ambar":
-        print("=== AMBAR ===")
-        df, users_df, items_df = preprocess_data("ambar")
-        print_stats(df)
-        attr = "gender:token"
-        rmin, rmax = 1, 5
     elif DATASET == "bx":
         print("=== BX ===")
         df, users_df, items_df = preprocess_data("bx")
@@ -219,8 +176,6 @@ if __name__ == '__main__':
 
     print(users_df.groupby("attr:token").size() / len(users_df))
 
-    exit()
-
     # save splits without DP (beta=1)
     PATH = "../custom_datasets_prepared_rp/" + DATASET
     os.makedirs(PATH, exist_ok=True)
@@ -244,21 +199,3 @@ if __name__ == '__main__':
             print("ister_sampling_dp (e=%f, b=%f)" % (e, b))
             train_dp_df = item_stereotypicality_sampling_dp(dataset_df=train_df, user_info_df=users_df, beta=b, epsilon=e, rmin=rmin, rmax=rmax)
             train_dp_df.to_csv(PATH + "/" + DATASET + ".train_e" + str(e) + "_b" + str(b) + "_ister_dp" + ".rating", sep="\t", index=False, header=False)
-
-            """print("hybrid_sampling_dp (e=%f, b=%f)" % (e, b))
-            train_dp_df = hybrid_dp(dataset_df=train_df, user_info_df=users_df, beta=b, epsilon=e, rmin=rmin, rmax=rmax)
-            train_dp_df.to_csv(PATH + "/" + DATASET + ".train_e" + str(e) + "_b" + str(b) + "_hybrid_dp" + ".rating",
-                               sep="\t", index=False, header=False)
-
-            print("hybrid_sampling_del (e=%f, b=%f)" % (e, b))
-            train_dp_df = hybrid_dp(dataset_df=train_df, user_info_df=users_df, beta=b, epsilon=e, rmin=rmin, rmax=rmax)
-            train_dp_df.to_csv(PATH + "/" + DATASET + ".train_e" + str(e) + "_b" + str(b) + "_hybrid_del" + ".rating",
-                               sep="\t", index=False, header=False)"""
-
-        print("random_sampling_del (b=%f)" % (b))
-        train_dp_df = random_sampling_del(dataset_df=train_df, beta=b)
-        train_dp_df.to_csv(PATH + "/" + DATASET + ".train_b" + str(b) + "_random_del" + ".rating", sep="\t", index=False, header=False)
-
-        print("ister_sampling_del (b=%f)" % (b))
-        train_dp_df = item_stereotypicality_sampling_del(dataset_df=train_df, user_info_df=users_df, beta=b)
-        train_dp_df.to_csv(PATH + "/" + DATASET + ".train_b" + str(b) + "_ister_del" + ".rating", sep="\t", index=False, header=False)
