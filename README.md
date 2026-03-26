@@ -16,7 +16,7 @@ Overall, a targeted application of DP combined with meta-learning enables more a
 ```
 data/prepare_dataset.py
 ```
-* <i>Hyperparameter Tuning</i>: Tune hyperparameters (learning rate, regularization factor) of MetaMF and NoMetaMF for both datasets and all values of the privacy budget $\epsilon$.
+* <i>Hyperparameter Tuning</i>: Tune hyperparameters (learning rate, regularization factor) of MetaMF[1] and NoMetaMF for both datasets and all values of the privacy budget $\epsilon$.
 ```
 hyperparameter_tuning_meta.py
 ```
@@ -48,11 +48,10 @@ results/analysis_attacker.py
 results/analysis_tradeoff.py
 ```
 
-## Requirements
-
-
 ## Contributors
 * Peter Müllner, Know-Center GmbH, Graz, pmuellner [AT] know [MINUS] center [DOT] at (Contact)
 * Markus Schedl, JKU and LIT, Linz
 * Dominik Kowald, Know-Center GmbH and Graz University, Graz
 * Elisabeth Lex, Graz University of Technology, Graz
+
+[1] Lin, Y., Ren, P., Chen, Z., Ren, Z., Yu, D., Ma, J., ... & Cheng, X. (2020, July). Meta matrix factorization for federated rating predictions. In Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval (pp. 981-990).
